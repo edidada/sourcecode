@@ -12,7 +12,7 @@ import pika, json
 
 #/(apiserver.0) Establish connection to broker
 creds_broker = pika.PlainCredentials("rpc_user", "rpcme")
-conn_params = pika.ConnectionParameters("localhost",
+conn_params = pika.ConnectionParameters("172.18.176.57",
                                         virtual_host = "/",
                                         credentials = creds_broker)
 conn_broker = pika.BlockingConnection(conn_params)
@@ -20,7 +20,7 @@ channel = conn_broker.channel()
 
 #/(apiserver.1) Declare Exchange & "ping" Call Queue
 channel.exchange_declare(exchange="rpc",
-                         type="direct",
+                         exchange_type="direct",
                          auto_delete=False)
 channel.queue_declare(queue="ping", auto_delete=False)
 channel.queue_bind(queue="ping",
@@ -28,18 +28,18 @@ channel.queue_bind(queue="ping",
                    routing_key="ping")
 
 #/(apiserver.2) Wait for RPC calls and reply
-def api_ping(channel, method, header, body):
+def api_ping(ch, method, properties, body):
     """'ping' API call."""
-    channel.basic_ack(delivery_tag=method.delivery_tag)
-    msg_dict = json.loads(body)
-    print "Received API call...replying..."
-    channel.basic_publish(body="Pong!" + str(msg_dict["time"]),
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+    msg_dict = json.loads(body.decode('utf-8'))
+    print("Received API call...replying...")
+    ch.basic_publish(body="Pong!" + str(msg_dict["time"]),
                           exchange="",
-                          routing_key=header.reply_to)
+                          routing_key=properties.reply_to)
 
-channel.basic_consume(api_ping,
-                      queue="ping",
+channel.basic_consume(queue="ping",
+                      on_message_callback=api_ping,
                       consumer_tag="ping")
 
-print "Waiting for RPC calls..."
+print("Waiting for RPC calls...")
 channel.start_consuming()

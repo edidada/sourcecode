@@ -9,25 +9,40 @@
 # (C)2011
 ###############################################
 
-import pika, sys
+import pika, os, sys
+from configparser import ConfigParser, sys
 from pika import spec
 
+# Read configuration from config file
+config = ConfigParser()
+config.read(os.path.join(os.path.dirname(__file__), '..', 'chapter-4', 'config.ini'))
+
+# Get environment from ENV or default to 'dev'
+env = os.environ.get('RABBITMQ_ENV', 'dev')
+if env not in config.sections():
+    print(f"Error: Environment '{env}' not found in config.ini")
+    sys.exit(1)
+
+# Use guest credentials for chapter-2 examples
 credentials = pika.PlainCredentials("guest", "guest")
-conn_params = pika.ConnectionParameters("localhost",
-                                        credentials = credentials)
+conn_params = pika.ConnectionParameters(
+    host=config.get(env, 'host'),
+    port=config.getint(env, 'port'),
+    credentials=credentials
+)
 conn_broker = pika.BlockingConnection(conn_params) 
 
 channel = conn_broker.channel()
 
 def confirm_handler(frame): #/(hwppc.1) Publisher confirm handler
     if type(frame.method) == spec.Confirm.SelectOk:
-        print "Channel in 'confirm' mode."
+        print("Channel in 'confirm' mode.")
     elif type(frame.method) == spec.Basic.Nack:
         if frame.method.delivery_tag in msg_ids:
-            print "Message lost!"
+            print("Message lost!")
     elif type(frame.method) == spec.Basic.Ack:
         if frame.method.delivery_tag in msg_ids:
-            print "Confirm received!"
+            print("Confirm received!")
             msg_ids.remove(frame.method.delivery_tag)
 
 #/(hwppc.2) Put channel in "confirm" mode

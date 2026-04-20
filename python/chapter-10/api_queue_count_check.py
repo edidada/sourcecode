@@ -8,7 +8,7 @@
 # (C)2011
 ###############################################
 
-import sys, json, httplib, urllib, base64, socket
+import sys, json, http.client, urllib.parse, base64, socket
 
 #(aqcc.0) Nagios status codes
 EXIT_OK = 0
@@ -29,15 +29,15 @@ max_ready_warn = int(sys.argv[9])
 
 
 #/(aqcc.2) Connect to server
-conn = httplib.HTTPConnection(server, port)
+conn = http.client.HTTPConnection(server, int(port))
 
 #/(aqcc.3) Build API path
-path = "/api/queues/%s/%s" % (urllib.quote(vhost, safe=""),
+path = "/api/queues/%s/%s" % (urllib.parse.quote(vhost, safe=""),
                               queue_name)
 method = "GET"
 
 #/(aqcc.4) Issue API request
-credentials = base64.b64encode("%s:%s" % (username, password))
+credentials = base64.b64encode(("%s:%s" % (username, password)).encode('utf-8')).decode('utf-8')
 
 try:
     conn.request(method, path, "",
@@ -46,43 +46,43 @@ try:
 
 #/(aqcc.5) Could not connect to API server, return unknown status
 except socket.error:
-    print "UNKNOWN: Could not connect to %s:%s" % (server, port)
+    print("UNKNOWN: Could not connect to %s:%s" % (server, port))
     exit(EXIT_UNKNOWN)
 
 response = conn.getresponse()
 
 #/(aqcc.6) RabbitMQ not responding/alive, return critical status
 if response.status > 299:
-    print "UNKNOWN: Unexpected API error: %s" % response.read()
+    print("UNKNOWN: Unexpected API error: %s" % response.read().decode('utf-8'))
     exit(EXIT_UNKNOWN)
 
 #/(aqcc.7) Extract message count levels from response
-resp_payload = json.loads(response.read())
+resp_payload = json.loads(response.read().decode('utf-8'))
 msg_cnt_unack = resp_payload["messages_unacknowledged"]
 msg_cnt_ready = resp_payload["messages_ready"]
 msg_cnt_total = resp_payload["messages"]
 
 #/(aqcc.8) Consumed but unacknowledged message count above thresholds
 if msg_cnt_unack >= max_unack_critical:
-    print "CRITICAL: %s - %d unack'd messages." % (queue_name,
-                                                   msg_cnt_unack)
+    print("CRITICAL: %s - %d unack'd messages." % (queue_name,
+                                                   msg_cnt_unack))
     exit(EXIT_CRITICAL)
 elif msg_cnt_unack >= max_unack_warn:
-    print "WARN: %s - %d unack'd messages." % (queue_name,
-                                               msg_cnt_unack)
+    print("WARN: %s - %d unack'd messages." % (queue_name,
+                                               msg_cnt_unack))
     exit(EXIT_WARNING)
 
 #/(aqcc.9) Ready to be consumed message count above thresholds
 if msg_cnt_ready >= max_ready_critical:
-    print "CRITICAL: %s - %d unconsumed messages." % (queue_name,
-                                                      msg_cnt_ready)
+    print("CRITICAL: %s - %d unconsumed messages." % (queue_name,
+                                                      msg_cnt_ready))
     exit(EXIT_CRITICAL)
 elif msg_cnt_ready >= max_ready_warn:
-    print "WARN: %s - %d unconsumed messages." % (queue_name,
-                                                  msg_cnt_ready)
+    print("WARN: %s - %d unconsumed messages." % (queue_name,
+                                                  msg_cnt_ready))
     exit(EXIT_WARNING)
 
 #/(aqcc.10) Message counts below thresholds, return OK status
-print "OK: %s - %d in-flight messages. %dB used memory." % \
-      (queue_name, msg_cnt_total, resp_payload["memory"])
+print("OK: %s - %d in-flight messages. %dB used memory." %
+      (queue_name, msg_cnt_total, resp_payload["memory"]))
 exit(EXIT_OK)

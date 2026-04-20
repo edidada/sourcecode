@@ -6,11 +6,11 @@
 # Author: Jason J. W. Williams
 # (C)2011
 ###############################################
-import sys, json, httplib, urllib, base64
+import sys, json, http.client, urllib.parse, base64
 
 #/(qs.0) Validate argument count
 if len(sys.argv) < 6:
-    print "USAGE: queue_stats.py server_name:port auth_user auth_pass VHOST QUEUE_NAME"
+    print("USAGE: queue_stats.py server_name:port auth_user auth_pass VHOST QUEUE_NAME")
     sys.exit(1)
 
 #/(qs.1) Assign arguments to memorable variables
@@ -21,16 +21,16 @@ vhost = sys.argv[4]
 queue_name = sys.argv[5]
 
 #/(qs.2) Build API path
-vhost = urllib.quote(vhost, safe='')
-queue_name = urllib.quote(queue_name, safe='')
+vhost = urllib.parse.quote(vhost, safe='')
+queue_name = urllib.parse.quote(queue_name, safe='')
 path = "/api/queues/%s/%s" % (vhost, queue_name)
 #/(qs.3) Set the request method
 method = "GET"
 
 #/(qs.4) Connect to the API server
-conn = httplib.HTTPConnection(server, port)
+conn = http.client.HTTPConnection(server, int(port))
 #/(qs.5) Base64 the username/password
-credentials = base64.b64encode("%s:%s" % (username, password))
+credentials = base64.b64encode(("%s:%s" % (username, password)).encode('utf-8')).decode('utf-8')
 #/(qs.6) Set the content-type and credentials
 headers = {"Content-Type" : "application/json",
            "Authorization" : "Basic " + credentials}
@@ -39,21 +39,12 @@ conn.request(method, path, "", headers)
 #/(qs.8) Receive the response.
 response = conn.getresponse()
 if response.status > 299:
-    print "Error executing API call (%d): %s" % (response.status,
-                                                 response.read())
+    print("Error executing API call (%d): %s" % (response.status,
+                                                 response.read().decode('utf-8')))
     sys.exit(2)
 
 #/(qs.9) Decode response
-resp_payload = json.loads(response.read())
+resp_payload = json.loads(response.read().decode('utf-8'))
 
 #/(qs.10) Display queue statistics
-print "'%s' Queue Stats" % urllib.unquote(queue_name)
-print "-----------------"
-print "\tMemory Used (bytes): " + str(resp_payload["memory"])
-print "\tConsumer Count: " + str(resp_payload["consumers"])
-print "\tMessages:"
-print "\t\tUnack'd: " + str(resp_payload["messages_unacknowledged"])
-print "\t\tReady: " + str(resp_payload["messages_ready"])
-print "\t\tTotal: " + str(resp_payload["messages"])
-
-sys.exit(0)
+print("'%s' Queue Stats" % urllib.parse.unquote(queue_name))

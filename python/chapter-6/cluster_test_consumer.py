@@ -10,12 +10,12 @@
 import sys, json, pika, time, traceback
 
 
-def msg_rcvd(channel, method, header, body):
-    message = json.loads(body)
+def msg_rcvd(ch, method, properties, body):
+    message = json.loads(body.decode('utf-8'))
     
     #/(ctc.1) Print & acknowledge our message
-    print "Received: %(content)s/%(time)d" % message
-    channel.basic_ack(delivery_tag=method.delivery_tag)
+    print("Received: %(content)s/%(time)d" % message)
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 if __name__ == "__main__":
@@ -41,7 +41,7 @@ if __name__ == "__main__":
             channel = conn_broker.channel()
             #/(ctc.7) Declare the exchange, queues & bindings
             channel.exchange_declare( exchange="cluster_test",
-                                      type="direct",
+                                      exchange_type="direct",
                                       auto_delete=False)    
             channel.queue_declare( queue="cluster_test",
                                    auto_delete=False)
@@ -50,15 +50,11 @@ if __name__ == "__main__":
                                 routing_key="cluster_test")
             
             #/(ctc.8) Start consuming messages
-            print "Ready for testing!"
-            channel.basic_consume( msg_rcvd,
-                                   queue="cluster_test",
-                                   no_ack=False,
+            print("Ready for testing!")
+            channel.basic_consume(queue="cluster_test",
+                                   on_message_callback=msg_rcvd,
                                    consumer_tag="cluster_test")
             channel.start_consuming()
         #/(ctc.9) Trap connection errors and print them
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc()
-    
-    
-    

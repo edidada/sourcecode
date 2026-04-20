@@ -10,12 +10,12 @@
 import sys, json, pika, time, traceback
 
 
-def msg_rcvd(channel, method, header, body):
-    message = json.loads(body)
+def msg_rcvd(ch, method, properties, body):
+    message = json.loads(body.decode('utf-8'))
     
     #/(ctc.1) Print & acknowledge our order
-    print "Received order %(ordernum)d for %(type)s." % message
-    channel.basic_ack(delivery_tag=method.delivery_tag)
+    print("Received order %(ordernum)d for %(type)s." % message)
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 if __name__ == "__main__":
@@ -35,10 +35,8 @@ if __name__ == "__main__":
     channel = conn_broker.channel()
     
     #/(ctc.8) Start processing orders
-    print "Ready for orders!"
-    channel.basic_consume( msg_rcvd,
-                           queue="warehouse_carpinteria",
-                           no_ack=False,
+    print("Ready for orders!")
+    channel.basic_consume(queue="warehouse_carpinteria",
+                           on_message_callback=msg_rcvd,
                            consumer_tag="order_processor")
     channel.start_consuming()
-    

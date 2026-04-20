@@ -31,9 +31,9 @@ try:
     channel = conn_broker.channel()
 except Exception:
 #/(nc.3) Connection failed, return CRITICAL status
-    print "CRITICAL: Could not connect to %s:%s!" % (server, port)
+    print("CRITICAL: Could not connect to %s:%s!" % (server, port))
     exit(EXIT_CRITICAL)
 
 #(nc.4) Connection OK, return OK status
-print "OK: Connect to %s:%s successful." % (server, port)
+print("OK: Connect to %s:%s successful." % (server, port))
 exit(EXIT_OK)

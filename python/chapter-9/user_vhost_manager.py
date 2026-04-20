@@ -17,14 +17,14 @@
 # Author: Jason J. W. Williams
 # (C)2011
 ###############################################
-import sys, json, httplib, base64
+import sys, json, http.client, base64
 
 base_path = "/api/%ss"
 
 #/(uvm.1) Assign arguments
 if len(sys.argv) < 6:
-    print "USAGE: user_vhost_manager.py server_name:port auth_user auth_pass",
-    print "ACTION RESOURCE [PARAMS...]"
+    print("USAGE: user_vhost_manager.py server_name:port auth_user auth_pass")
+    print("ACTION RESOURCE [PARAMS...]")
     sys.exit(1)
 
 server, port = sys.argv[1].split(":")
@@ -39,7 +39,7 @@ else:
     res_params = []
 
 #/(uvm.2) Connect to server
-conn = httplib.HTTPConnection(server, port)
+conn = http.client.HTTPConnection(server, int(port))
 
 #/(uvm.3) Build API request
 if action == "list":
@@ -74,47 +74,47 @@ if action == "create" and res_type == "permission":
     json_args = json.dumps(json_args)
 
 #/(uvm.5) Issue API call
-credentials = base64.b64encode("%s:%s" % (username, password))
+credentials = base64.b64encode(("%s:%s" % (username, password)).encode('utf-8')).decode('utf-8')
 conn.request(method, path, json_args,
              {"Content-Type" : "application/json",
               "Authorization" : "Basic " + credentials})
 response = conn.getresponse()
 if response.status > 299:
-    print "Error executing API call (%d): %s" % (response.status,
-                                                 response.read())
+    print("Error executing API call (%d): %s" % (response.status,
+                                                 response.read().decode('utf-8')))
     sys.exit(2)
 
 #/(uvm.6) Parse and display response
-resp_payload = response.read()
+resp_payload = response.read().decode('utf-8')
 if action in ["list", "show"]:
     resp_payload = json.loads(resp_payload)
     
     #/(uvm.7) Process 'list' results
     if action == "list":
-        print "Count: %d" % len(resp_payload)
+        print("Count: %d" % len(resp_payload))
         if res_type == "vhost":
             for vhost in resp_payload:
-                print "Vhost: %(name)s" % vhost
+                print("Vhost: %(name)s" % vhost)
         elif res_type == "user":
             for user in resp_payload:
-                print "User: %(name)s" % user
-                print "\tPassword: %(password_hash)s" % user
-                print "\tAdministrator: %(administrator)s\n" % user
+                print("User: %(name)s" % user)
+                print("\tPassword: %(password_hash)s" % user)
+                print("\tAdministrator: %(administrator)s\n" % user)
     
     #/(uvm.8) Process 'show' results
     elif action == "show":
         if res_type == "vhost":
-            print "Vhost: %(name)s" % resp_payload
+            print("Vhost: %(name)s" % resp_payload)
         elif res_type == "user":
-            print "User: %(name)s" % resp_payload
-            print "\tPassword: %(password_hash)s" % resp_payload
-            print "\tAdministrator: %(administrator)s\n" % resp_payload
+            print("User: %(name)s" % resp_payload)
+            print("\tPassword: %(password_hash)s" % resp_payload)
+            print("\tAdministrator: %(administrator)s\n" % resp_payload)
         elif res_type == "permission":
-            print "Permissions for '%(user)s' in '%(vhost)s'..." % resp_payload
-            print "\tRead: %(read)s" % resp_payload
-            print "\tWrite: %(write)s" % resp_payload
-            print "\tConfig: %(configure)s" % resp_payload
+            print("Permissions for '%(user)s' in '%(vhost)s'..." % resp_payload)
+            print("\tRead: %(read)s" % resp_payload)
+            print("\tWrite: %(write)s" % resp_payload)
+            print("\tConfig: %(configure)s" % resp_payload)
 else:
-    print "Completed request!"
+    print("Completed request!")
 
 sys.exit(0)

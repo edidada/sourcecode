@@ -35,5 +35,6 @@ channel.basic_publish(body=msg, mandatory=True,
                       properties=msg_props,
                       routing_key="warehouse")
 
-print "Sent avocado order message."
+print("Sent avocado order message.")
+
 

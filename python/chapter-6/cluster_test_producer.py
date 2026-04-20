@@ -34,5 +34,6 @@ channel.basic_publish(body=msg, mandatory=True,
                       properties=msg_props,
                       routing_key="cluster_test")
 
-print "Sent cluster test message."
+print("Sent cluster test message.")
+
 

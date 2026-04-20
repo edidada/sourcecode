@@ -1,8 +1,8 @@
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.QueueingConsumer;
-import com.rabbitmq.client.QueueingConsumer.Delivery;
+import com.rabbitmq.client.DefaultConsumer;
+import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import org.json.JSONStringer;
 import org.json.JSONException;
@@ -12,7 +12,8 @@ public class Client {
   private Connection connection;
   private Channel channel;
   private String replyQueueName;
-  private QueueingConsumer consumer;
+  private volatile String response;
+  private final Object lock = new Object();
 
   public Client init()
   throws Exception {
@@ -27,13 +28,20 @@ public class Client {
   public Client setupConsumer()
   throws Exception {
     replyQueueName = channel.queueDeclare().getQueue();
-    consumer = new QueueingConsumer(channel);
-    channel.basicConsume(replyQueueName, false, consumer);
+    channel.basicConsume(replyQueueName, false, new DefaultConsumer(channel) {
+      @Override
+      public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties props, byte[] body) {
+        synchronized (lock) {
+          response = new String(body);
+          lock.notify();
+        }
+      }
+    });
     return this;
   }
 
   public String call(String message) throws Exception {
-    String response = null;
+    response = null;
 
     channel.basicPublish(
       "rpc",
@@ -44,10 +52,10 @@ public class Client {
 
     System.out.println("Sent 'ping' RPC call. Waiting for reply...");
 
-    while (true) {
-      Delivery delivery = consumer.nextDelivery();
-      response = new String(delivery.getBody(), "UTF-8");
-      break;
+    synchronized (lock) {
+      while (response == null) {
+        lock.wait();
+      }
     }
 
     return response;

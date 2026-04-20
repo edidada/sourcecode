@@ -4,3 +4,4 @@ obj
 *.csproj.user
 *.class
 *.jar
+target

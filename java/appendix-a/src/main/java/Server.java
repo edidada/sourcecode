@@ -20,6 +20,7 @@ public class Server
     ConnectionFactory factory = new ConnectionFactory();
     factory.setUsername("rpc_user");
     factory.setPassword("rpcme");
+    factory.setHost("172.18.176.57");
     connection = factory.newConnection();
     channel = connection.createChannel();
 

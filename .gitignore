@@ -5,3 +5,4 @@ obj
 *.class
 *.jar
 target
+.idea

@@ -1,3 +1,5 @@
+package com.example.rabbitmq_demo;
+
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
